@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { font-family: Arial, sans-serif; padding: 15px; color: #333; }
+      label { font-size: 12px; font-weight: bold; margin-top: 10px; display: block; }
+      textarea, input, select, button { 
+        width: 100%; box-sizing: border-box; margin-top: 4px; padding: 8px; 
+        border: 1px solid #ccc; border-radius: 4px; font-family: inherit;
+      }
+      textarea { height: 160px; resize: vertical; }
+      .row { display: flex; gap: 10px; margin-top: 10px; }
+      .col { flex: 1; }
+      button { 
+        background-color: #1a73e8; color: white; border: none; 
+        margin-top: 15px; font-weight: bold; cursor: pointer; transition: 0.2s;
+      }
+      button:hover { background-color: #1557b0; }
+      #status { font-size: 12px; font-weight: bold; color: #d93025; margin-top: 10px; }
+      
+      
+      .example-box {
+        background-color: #f1f3f4;
+        border-left: 3px solid #1a73e8;
+        padding: 10px;
+        margin-top: 6px;
+        margin-bottom: 6px;
+        font-size: 11px;
+        color: #5f6368;
+        border-radius: 0 4px 4px 0;
+      }
+      .example-box code {
+        display: block;
+        font-family: 'Courier New', monospace;
+        margin-top: 6px;
+        color: #202124;
+        line-height: 1.4;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+
+    <label>Raw Project Data</label>
+    
+    <div class="example-box">
+      <strong>Recommended Format:</strong> Task + Duration + Start Week
+      <code>Discovery 1 Week, Start W0
+Data Migration 6 Weeks, Start W1
+UI/UX 3 Weeks, Start W1
+(To run in parallel)
+Admin Setup 2 days, Start W16</code>
+    </div>
+
+    <textarea id="projectData" placeholder="Paste your tasks here following the format above..."></textarea>
+
+    <div class="row">
+      <div class="col">
+        <label style="margin-top:0;">Global Start Date</label>
+        <input type="date" id="startDate" required>
+      </div>
+    </div>
+    
+    <div class="row">
+      <div class="col">
+        <label style="margin-top:0;">Unit</label>
+        <select id="unit">
+          <option value="Week">Weeks</option>
+          <option value="Day">Days</option>
+          <option value="Month">Months</option>
+        </select>
+      </div>
+      <div class="col">
+        <label style="margin-top:0;">Limit</label>
+        <input type="number" id="duration" value="17">
+      </div>
+    </div>
+
+    <button id="runBtn" onclick="generate()">Generate PM Schedule</button>
+    <div id="status"></div>
+
+    <script>
+      document.getElementById('startDate').valueAsDate = new Date();
+
+      function generate() {
+        const btn = document.getElementById('runBtn');
+        const status = document.getElementById('status');
+        
+        const data = document.getElementById('projectData').value;
+        const unit = document.getElementById('unit').value;
+        const duration = document.getElementById('duration').value;
+        const startDate = document.getElementById('startDate').value;
+
+        if(!startDate || !data) {
+          status.innerText = "Error: Please provide data and a Start Date.";
+          return;
+        }
+
+        btn.disabled = true;
+        btn.innerText = "Calculating Biz Days...";
+        status.style.color = "#555";
+        status.innerText = "LLM is analyzing task sequence...";
+
+        google.script.run
+          .withSuccessHandler(function(response) {
+             btn.disabled = false;
+             btn.innerText = "Generate PM Schedule";
+             if(response.includes("Error") || response.includes("Crash")) {
+               status.style.color = "#d93025";
+               status.innerText = response;
+             } else {
+               status.style.color = "#188038";
+               status.innerText = response;
+             }
+          })
+          .withFailureHandler(function(error) {
+             btn.disabled = false;
+             btn.innerText = "Generate PM Schedule";
+             status.style.color = "#d93025";
+             status.innerText = "System Crash: " + error.message;
+          })
+          .generateGantt(data, duration, unit, startDate);
+      }
+    </script>
+  </body>
+</html>
